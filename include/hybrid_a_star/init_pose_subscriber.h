@@ -48,7 +48,7 @@ private:
     ros::Subscriber subscriber_;
     std::deque<geometry_msgs::PoseWithCovarianceStampedPtr> init_poses_;
 
-    std::mutex buff_mutex_;
+    std::mutex buff_mutex_;  //互斥锁  用于保护共享数据的访问
 };
 
 #endif //HYBRID_A_STAR_INIT_POSE_SUBSCRIBER_H
