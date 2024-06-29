@@ -44,36 +44,48 @@ class RSPath {
 public:
     RSPath() = delete;
 
+    // explicit关键字表示这个构造函数是显式的
+    // 这意味着在创建RSPath对象时，必须显式地传递参数，而不能隐式地传递。
     explicit RSPath(double turning_radius = 1.0);
 
+    // 定义RSPathSegmentType枚举类型，表示路径段类型
     enum RSPathSegmentType {
         N = 0, L = 1, S = 2, R = 3
     };
+    // 定义一个静态常量数组RS_path_segment_type，用于存储路径段类型
     static const RSPathSegmentType RS_path_segment_type[18][5];
 
+    // 定义RSPathData结构体，用于存储路径数据
     struct RSPathData {
     public:
+        // 构造函数，根据路径段类型、t、u、v、w、x参数初始化RSPathData对象
         explicit RSPathData(const RSPathSegmentType *type = RS_path_segment_type[0],
                             double t = std::numeric_limits<double>::max(),
                             double u = 0.0, double v = 0.0, double w = 0.0, double x = 0.0) : type_(type) {
+            // 将路径段类型存储在type_中
             length_[0] = t;
             length_[1] = u;
             length_[2] = v;
             length_[3] = w;
             length_[4] = x;
+            // 计算路径总长度，并存储在total_length_中
             total_length_ = std::fabs(length_[0]) + std::fabs(length_[1]) + std::fabs(length_[2])
                             + std::fabs(length_[3]) + std::fabs(length_[4]);
         }
 
+        // 返回路径总长度
         double Length() const {
             return total_length_;
         }
 
     public:
+        // 存储路径段类型的数组
         double length_[5]{};
+        // 存储路径段类型的指针
         const RSPathSegmentType *type_;
 
     private:
+        // 存储路径总长度的变量
         double total_length_;
     };
 

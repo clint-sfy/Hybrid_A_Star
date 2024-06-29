@@ -53,76 +53,108 @@ const RSPath::RSPathSegmentType RSPath::RS_path_segment_type[18][5] = {
 
 RSPath::RSPath(double turning_radius) : turning_radius_(turning_radius) {}
 
+
 double RSPath::Mod2Pi(double x) {
+    // 将x取模2*pi
     double v = fmod(x, 2 * M_PI);
 
+    // 如果v小于-pi，则v=v+2*pi
     if (v < -M_PI) {
         v += 2.0 * M_PI;
+    // 如果v大于pi，则v=v-2*pi
     } else if (v > M_PI) {
         v -= 2.0 * M_PI;
     }
 
+    // 返回v
     return v;
 }
 
+// 计算极坐标
 void RSPath::Polar(double x, double y, double &r, double &theta) {
+    //计算x和y的平方和
     r = std::sqrt(x * x + y * y);
+    //计算x和y的比值
     theta = std::atan2(y, x);
 }
 
+
+// 此函数计算给定一组输入参数的 tau 和 omega 值
 void RSPath::TauOmega(double u, double v, double xi, double eta, double phi, double &tau, double &omega) {
+    // Calculate the difference between u and v
     double delta = Mod2Pi(u - v);
+    // Calculate the values of A and B
     double A = std::sin(u) - std::sin(delta);
     double B = std::cos(u) - std::cos(delta) - 1.0;
+    // Calculate the value of t1
     double t1 = std::atan2(eta * A - xi * B, xi * A + eta * B);
+    // Calculate the value of t2
     double t2 = 2.0 * (std::cos(delta) - std::cos(v) - std::cos(u)) + 3.0;
+    // Calculate the value of tau
     tau = (t2 < 0.0) ? Mod2Pi(t1 + M_PI) : Mod2Pi(t1);
+    // Calculate the value of omega
     omega = Mod2Pi(tau - u + v - phi);
 }
 
+// 函数用于计算从(x,y)点出发，方向为phi角度的路径上，离(x,y)最近的极点(t,u,v)
 bool RSPath::LpSpLp(double x, double y, double phi, double &t, double &u, double &v) {
+    // 将(x,y)点转换为极坐标系
     Polar(x - std::sin(phi), y - 1.0 + std::cos(phi), u, t);
 
+    // 如果t大于等于0，则表示路径上存在极点
     if (t >= 0.0) {
+        // 将极角从phi转换为t
         v = Mod2Pi(phi - t);
+        // 如果v大于等于0，则表示路径上存在极点
         if (v >= 0.0) {
             return true;
         }
     }
-
     return false;
 }
 
+// 函数用于计算给定角度phi下，以(x,y)为圆心，半径为u的圆上的点(t,u,v)
 bool RSPath::LpSpRp(double x, double y, double phi, double &t, double &u, double &v) {
+    // 计算以(x+sin(phi),y-cos(phi))为圆心，半径为1的圆上的点(u1,t1)
     double t1, u1;
     Polar(x + std::sin(phi), y - 1 - std::cos(phi), u1, t1);
+    // 计算u1的平方
     u1 = std::pow(u1, 2);
 
+    // 如果u1小于4，则返回false
     if (u1 < 4.0) {
         return false;
     }
 
+    // 计算theta
     double theta;
+    // 计算u
     u = std::sqrt(u1 - 4.0);
+    // 计算t
     theta = std::atan2(2.0, u);
+    // 计算t
     t = Mod2Pi(t1 + theta);
+    // 计算v
     v = Mod2Pi(t - phi);
 
+    // 返回true
     return true;
 }
 
+// 获取RSPath路径数据
 RSPath::RSPathData RSPath::GetRSPath(const double x_0, const double y_0, const double yaw_0,
                                      const double x_1, const double y_1, const double yaw_1) {
-    // translation
+    // 计算x和y方向上的位移
     double dx = x_1 - x_0;
     double dy = y_1 - y_0;
 
-    // rotate
+    // 计算旋转矩阵
     double c = std::cos(yaw_0);// 2d rotation matrix
     double s = std::sin(yaw_0);
     double x = c * dx + s * dy;
     double y = -s * dx + c * dy;
     double phi = yaw_1 - yaw_0;
+    // 返回RSPath路径数据
     return GetRSPath(x / turning_radius_, y / turning_radius_, phi);
 }
 
@@ -142,23 +174,29 @@ double RSPath::Distance(const double x_0, const double y_0, const double yaw_0,
     return turning_radius_ * GetRSPath(x_0, y_0, yaw_0, x_1, y_1, yaw_1).Length();
 }
 
+// 计算从起点到终点的路径
 void RSPath::CSC(double x, double y, double phi, RSPathData &path) {
+    // 定义t,u,v,length_min,L
     double t, u, v, length_min = path.Length(), L;
 
+    // 如果LpSpLp函数返回true，并且length_min大于从起点到终点的距离，则更新path和length_min
     if (LpSpLp(x, y, phi, t, u, v) && length_min > (L = std::fabs(t) + std::fabs(u) + std::fabs(v))) {
         path = RSPathData(RS_path_segment_type[14], t, u, v);
         length_min = L;
     }
 
+    // 如果LpSpLp函数返回true，并且length_min大于从起点到终点的距离，则更新path和length_min
     if (LpSpLp(-x, y, -phi, t, u, v) && length_min > (L = std::fabs(t) + std::fabs(u) + std::fabs(v))) {
         path = RSPathData(RS_path_segment_type[14], -t, -u, -v);
         length_min = L;
     }
 
+    // 如果LpSpLp函数返回true，并且length_min大于从起点到终点的距离，则更新path和length_min
     if (LpSpLp(x, -y, -phi, t, u, v) && length_min > (L = std::fabs(t) + std::fabs(u) + std::fabs(v))) {
         path = RSPathData(RS_path_segment_type[15], t, u, v);
         length_min = L;
     }
+
 
     if (LpSpLp(-x, -y, phi, t, u, v) && length_min > (L = std::fabs(t) + std::fabs(u) + std::fabs(v))) {
         path = RSPathData(RS_path_segment_type[15], -t, -u, -v);

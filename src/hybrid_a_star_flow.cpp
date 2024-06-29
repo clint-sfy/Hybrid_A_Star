@@ -33,6 +33,8 @@
 #include <tf/transform_datatypes.h>
 #include <tf/transform_broadcaster.h>
 
+
+// __attribute__((unused))是一个编译器指令，用于告诉编译器这个函数不会被其他代码调用
 __attribute__((unused)) double Mod2Pi(const double &x) {
     double v = fmod(x, 2 * M_PI);
 
@@ -74,35 +76,35 @@ HybridAStarFlow::HybridAStarFlow(ros::NodeHandle &nh) {
 void HybridAStarFlow::Run() {
     ReadData();
 
-    if (!has_map_) {
-        if (costmap_deque_.empty()) {
-            return;
+    if (!has_map_) { // 如果还没有初始化地图
+        if (costmap_deque_.empty()) { // 如果队列为空
+            return; // 直接返回
         }
 
-        current_costmap_ptr_ = costmap_deque_.front();
-        costmap_deque_.pop_front();
+        current_costmap_ptr_ = costmap_deque_.front(); // 从队列中取出一个地图
+        costmap_deque_.pop_front(); // 从队列中移除这个地图
 
-        const double map_resolution = static_cast<float>(current_costmap_ptr_->info.resolution);
-        kinodynamic_astar_searcher_ptr_->Init(
-                current_costmap_ptr_->info.origin.position.x,
-                1.0 * current_costmap_ptr_->info.width * current_costmap_ptr_->info.resolution,
-                current_costmap_ptr_->info.origin.position.y,
-                1.0 * current_costmap_ptr_->info.height * current_costmap_ptr_->info.resolution,
-                1.0, map_resolution
+        const double map_resolution = static_cast<float>(current_costmap_ptr_->info.resolution); // 获取地图分辨率
+        kinodynamic_astar_searcher_ptr_->Init( // 初始化kinodynamic_astar_searcher_ptr_
+                current_costmap_ptr_->info.origin.position.x, // 地图原点的x坐标
+                1.0 * current_costmap_ptr_->info.width * current_costmap_ptr_->info.resolution, // 地图宽度乘以分辨率
+                current_costmap_ptr_->info.origin.position.y, // 地图原点的y坐标
+                1.0 * current_costmap_ptr_->info.height * current_costmap_ptr_->info.resolution, // 地图高度乘以分辨率
+                1.0, map_resolution // 地图的缩放因子
         );
 
-        unsigned int map_w = std::floor(current_costmap_ptr_->info.width);
-        unsigned int map_h = std::floor(current_costmap_ptr_->info.height);
-        for (unsigned int w = 0; w < map_w; ++w) {
-            for (unsigned int h = 0; h < map_h; ++h) {
-                if (current_costmap_ptr_->data[h * current_costmap_ptr_->info.width + w]) {
-                    kinodynamic_astar_searcher_ptr_->SetObstacle(w, h);
+        unsigned int map_w = std::floor(current_costmap_ptr_->info.width); // 获取地图宽度
+        unsigned int map_h = std::floor(current_costmap_ptr_->info.height); // 获取地图高度
+        for (unsigned int w = 0; w < map_w; ++w) { // 遍历地图的每个点
+            for (unsigned int h = 0; h < map_h; ++h) { // 遍历地图的每个点
+                if (current_costmap_ptr_->data[h * current_costmap_ptr_->info.width + w]) { // 如果该点是障碍物
+                    kinodynamic_astar_searcher_ptr_->SetObstacle(w, h); // 设置该点为障碍物
                 }
             }
         }
-        has_map_ = true;
+        has_map_ = true; // 已经初始化地图
     }
-    costmap_deque_.clear();
+    costmap_deque_.clear(); // 清空队列
 
     while (HasStartPose() && HasGoalPose()) {
         InitPoseData();
